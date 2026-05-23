@@ -30,3 +30,44 @@ Run the following commands via the Google Cloud CLI to provision the infrastruct
 ### 1. Enable Required Cloud APIs
 ```bash
 gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com cloudscheduler.googleapis.com secretmanager.googleapis.com run.googleapis.com
+
+````
+2. Secure the API Key
+Create a secret container and inject your API key:
+
+Bash
+gcloud secrets create cti_api_key --replication-policy="automatic"
+echo -n "YOUR_API_KEY_HERE" | gcloud secrets versions add cti_api_key --data-file=-
+
+
+3. Configure IAM Permissions
+Grant the default compute service account permission to build containers and access the Secret Manager:
+
+Bash
+# Substitute YOUR_PROJECT_ID and YOUR_PROJECT_NUMBER below
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID --member="serviceAccount:YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/cloudbuild.builds.builder"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID --member="serviceAccount:YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role="roles/secretmanager.secretAccessor"
+4. Deploy the Cloud Function
+Navigate to the root directory containing main.py and deploy the Gen 2 function:
+
+Bash
+gcloud functions deploy cti-deep-research \
+  --gen2 \
+  --runtime=python312 \
+  --region=europe-west1 \
+  --source=. \
+  --entry-point=run_cti_research \
+  --trigger-http \
+  --timeout=3600 \
+  --set-secrets="GEMINI_API_KEY=cti_api_key:latest"
+5. Schedule the Automation
+Configure Cloud Scheduler to trigger the function monthly:
+
+Bash
+gcloud scheduler jobs create http trigger-cti-research \
+  --schedule="0 2 1 * *" \
+  --time-zone="Europe/Lisbon" \
+  --uri="YOUR_CLOUD_FUNCTION_TRIGGER_URL" \
+  --http-method=GET \
+  --location="europe-west1"
