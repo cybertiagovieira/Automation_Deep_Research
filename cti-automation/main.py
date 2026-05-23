@@ -29,17 +29,41 @@ def fetch_interaction_state(client, interaction_id):
 def execute_monthly_cti_research():
     month_year_string = get_previous_month_year()
     
-    prompt = f"""Conduct a comprehensive search for cyber threat intelligence (CTI) reports, threat landscape summaries, and cybersecurity news published in {month_year_string}. Focus on identifying the most active, dangerous, or newly emerging Threat Actors (including nation-state APTs, ransomware syndicates, and eCrime groups) operating in the global context, with a specific emphasis on those directly impacting the Banking, Financial Services, and Fintech sectors. Please extract and synthesize data detailing:
-Apex Threat Actors: The names and aliases of the dominant threat actors active during this month.
-Notable Incidents: Major cyberattacks, data breaches, systemic supply-chain compromises, or ransomware events they executed against financial institutions or global critical infrastructure.
-TTP Evolution & Tooling: Shifts in their Tactics, Techniques, and Procedures (TTPs), including the use of new malware families, exploitation of specific vulnerabilities (CVEs), identity-based access methods, or novel evasion techniques (e.g., non-standard runtimes or cloud infrastructure abuse).
-Motivations & Sector Impact: The underlying drivers for these campaigns (e.g., 'data-only' extortion, geopolitical pre-positioning, financial theft) and the resulting technical, operational, and systemic risks to the financial ecosystem."""
+    prompt = f"""Execute a multi-stage deep research protocol for cyber threat intelligence (CTI) covering {month_year_string}.
 
+    SEARCH CONSTRAINTS:
+    - Prioritize primary intelligence sources: Mandiant, CrowdStrike, Microsoft Threat Intelligence, SentinelOne, CISA, and FS-ISAC reports.
+    - Exclude: Consumer-level scams, basic retail fraud, website defacements, and low-impact DDoS events.
+    - Focus exclusively on: Banking, Financial Services, Fintech, and systemic critical infrastructure.
+
+    RESEARCH THRESHOLDS:
+    You must iterate your search queries until you have definitively identified and extracted data for:
+    1. A minimum of 4 distinct Apex Threat Actors (nation-state APTs or major ransomware syndicates) active in {month_year_string}.
+    2. A minimum of 5 distinct high-impact incidents or breaches affecting the target sectors.
+    3. At least 2 novel TTPs (Tactics, Techniques, and Procedures) involving cloud infrastructure, identity abuse, or zero-day exploitation.
+
+    OUTPUT SCHEMA:
+    Format the final report strictly using the following Markdown structure. Do not deviate or add extraneous sections.
+
+    # Global CTI Report: {month_year_string}
+
+    ## 1. Apex Threat Actors
+    [Detail the actors, aliases, origins, and primary targets]
+
+    ## 2. Notable Incidents and Breaches
+    [Detail the incidents, compromised entities, and operational impacts]
+
+    ## 3. TTP Evolution and Tooling
+    [Detail the novel TTPs, specific CVEs exploited, and attack vectors]
+
+    ## 4. Strategic Risk to Financial Ecosystems
+    [Synthesize the macro-level systemic risks and defensive imperatives]
+    """
     client = genai.Client()
 
     print(f"Starting Deep Research via SDK Interactions API for: {month_year_string}...")
     
-    # 1. Create Long-Running Interaction via the SDK native method
+    # 1. Create Long-Running Interaction
     interaction = client.interactions.create(
         agent='deep-research-preview-04-2026',
         input=prompt,
@@ -65,11 +89,21 @@ Motivations & Sector Impact: The underlying drivers for these campaigns (e.g., '
     return interaction.output_text
 
 if __name__ == "__main__":
+    # Ensure this environment variable is set with your actual AI Studio API key
     os.environ["GEMINI_API_KEY"] = "AIzaSyCluwq42XVpVyy-GP8iei6OHyEE0IoP34I"
     
     try:
         result = execute_monthly_cti_research()
-        print("\n--- Report Generated Successfully ---\n")
-        print(result)
+        
+        # Define dynamic filename based on the target month
+        target_month_str = get_previous_month_year().replace(", ", "_")
+        output_filename = f"CTI_Report_{target_month_str}.txt"
+        
+        # Write output to local text file
+        with open(output_filename, "w", encoding="utf-8") as file:
+            file.write(result)
+            
+        print(f"\n--- Report Generated Successfully and Saved as '{output_filename}' ---\n")
+        
     except Exception as e:
         print(f"\nPipeline Failure: {e}")
